@@ -11,6 +11,7 @@ resource "google_container_cluster" "primary" {
     image_type      = "COS_CONTAINERD"
     disk_type       = "pd-balanced"
     disk_size_gb    = 20
+    spot            = true
     metadata = {
       disable-legacy-endpoints = "true"
     }
