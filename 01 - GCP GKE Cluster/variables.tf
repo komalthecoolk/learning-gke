@@ -1,7 +1,6 @@
 variable "project_id" {
   description = "The GCP project ID."
   type        = string
-  default     = "mylearning-354010"
 }
 
 variable "region" {

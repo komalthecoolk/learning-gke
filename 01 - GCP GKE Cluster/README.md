@@ -31,7 +31,7 @@ Before deploying this Terraform configuration, ensure you have the following:
 
 You can customize the deployment by modifying the `variables.tf` file or by passing variables directly during Terraform execution.
 
-*   `project_id`: Your GCP project ID.
+*   `project_id`: Your GCP project ID (required; set via `TF_VAR_project_id` or `-var` flag).
 *   `region`: The GCP region where the GKE cluster will be created (e.g., `us-central1`).
 *   `cluster_name`: The desired name for your GKE cluster.
 *   `node_machine_type`: The machine type for the nodes in the cluster's node pool (e.g., `e2-small`).

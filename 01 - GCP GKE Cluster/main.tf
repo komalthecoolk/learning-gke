@@ -1,5 +1,5 @@
 resource "google_container_cluster" "primary" {
-  project                  = "mylearning-354010"
+  project                  = var.project_id
   name                     = "standard-public-cluster-1"
   location                 = "us-central1"
   initial_node_count       = 1
