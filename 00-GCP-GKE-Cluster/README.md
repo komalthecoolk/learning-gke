@@ -1,6 +1,6 @@
 # Google Cloud GKE Cluster - Terraform Configuration
 
-This Terraform configuration deploys a production-ready Google Kubernetes Engine (GKE) cluster on Google Cloud Platform. It's based on the gcloud command specification provided in `gcloud_commands.sh`.
+This Terraform configuration deploys a production-ready Google Kubernetes Engine (GKE) cluster on Google Cloud Platform.
 
 ## Overview
 
@@ -44,17 +44,37 @@ Before deploying this infrastructure, ensure you have:
 
 ## Configuration Details
 
+### Architecture Overview
+
+This configuration separates cluster management from node pool management:
+
+- **GKE Cluster** (`google_container_cluster`) - Manages the Kubernetes control plane, networking, and cluster-level settings
+- **Node Pool** (`google_container_node_pool`) - Manages worker nodes, scaling, and node-level configurations
+
+This separation provides better flexibility for managing multiple node pools and independent scaling strategies.
+
 ### Cluster Specifications
 
 | Parameter | Default Value | Description |
 |-----------|---------------|-------------|
-| **Cluster Name** | `standard-public-cluster-1` | Name of the GKE cluster |
+| **Cluster Name** | `learning-gke-cluster-1` | Name of the GKE cluster |
 | **Region** | `us-central1` | GCP region for the cluster |
 | **Node Locations** | `us-central1-a, b, c` | Zones for cluster nodes |
 | **Number of Nodes** | `1` | Initial node count per zone |
 | **Release Channel** | `REGULAR` | Automatic cluster version updates |
 
-### Node Configuration
+### Node Pool Configuration
+
+The node pool is managed as a separate resource (`google_container_node_pool`) which provides:
+
+| Parameter | Default Value | Description |
+|-----------|---------------|-------------|
+| **Min Node Count** | `1` | Minimum nodes for autoscaling |
+| **Max Node Count** | `3` | Maximum nodes for autoscaling |
+| **Auto Repair** | `true` | Automatically repair unhealthy nodes |
+| **Auto Upgrade** | `true` | Automatically upgrade node version |
+
+#### Node Specifications
 
 | Parameter | Default Value | Description |
 |-----------|---------------|-------------|
@@ -62,7 +82,7 @@ Before deploying this infrastructure, ensure you have:
 | **Image Type** | `COS_CONTAINERD` | Container OS with containerd runtime |
 | **Disk Type** | `pd-balanced` | Balanced persistent disk |
 | **Disk Size** | `20 GB` | Storage per node |
-| **Preemptible** | `true` (Spot VMs) | Use preemptible instances for cost savings |
+| **Spot VMs** | `true` | Use preemptible instances for cost savings |
 | **Max Pods per Node** | `110` | Maximum pods per node |
 
 ### Security Features
@@ -134,9 +154,13 @@ kubectl cluster-info
 
 ## Variables
 
-All variables are defined in `variables.tf`. You can customize them by:
+All variables are defined in `variables.tf`. This section documents all available variables organized by category.
 
-### Option 1: Using `terraform.tfvars`
+### How to Customize Variables
+
+You can customize variables using one of three methods:
+
+#### Option 1: Using `terraform.tfvars`
 
 Create a `terraform.tfvars` file:
 
@@ -146,7 +170,8 @@ region            = "us-west1"
 cluster_name      = "my-cluster"
 num_nodes         = 2
 machine_type      = "e2-medium"
-spot              = true
+min_node_count    = 1
+max_node_count    = 3
 ```
 
 Then apply:
@@ -154,22 +179,97 @@ Then apply:
 terraform apply
 ```
 
-### Option 2: Using `-var` flags
+#### Option 2: Using `-var` flags
 
 ```bash
 terraform apply \
   -var="project_id=my-gcp-project" \
   -var="cluster_name=my-cluster" \
-  -var="num_nodes=2"
+  -var="num_nodes=2" \
+  -var="min_node_count=1" \
+  -var="max_node_count=3"
 ```
 
-### Option 3: Using environment variables
+#### Option 3: Using environment variables
 
 ```bash
 export TF_VAR_project_id="my-gcp-project"
 export TF_VAR_cluster_name="my-cluster"
+export TF_VAR_num_nodes="2"
+export TF_VAR_min_node_count="1"
+export TF_VAR_max_node_count="3"
 terraform apply
 ```
+
+### Cluster Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `project_id` | string | *required* | GCP project ID |
+| `region` | string | `us-central1` | GCP region for the cluster |
+| `cluster_name` | string | `learning-gke-cluster-1` | Name of the GKE cluster |
+| `node_locations` | list(string) | `["us-central1-a"]` | List of zones where nodes are created |
+| `release_channel` | string | `REGULAR` | Release channel for cluster version updates |
+
+### Node Pool Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `num_nodes` | number | `1` | Initial number of nodes in the node pool |
+| `min_node_count` | number | `1` | Minimum nodes for autoscaling |
+| `max_node_count` | number | `1` | Maximum nodes for autoscaling |
+
+### Node Configuration Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `machine_type` | string | `e2-small` | VM type for nodes (e.g., e2-small, e2-medium, n2-standard-4) |
+| `image_type` | string | `COS_CONTAINERD` | Container OS image type |
+| `disk_type` | string | `pd-balanced` | Type of disk (pd-standard, pd-balanced, pd-ssd) |
+| `disk_size_gb` | number | `20` | Disk size in GB |
+| `default_max_pods_per_node` | number | `10` | Maximum pods per node |
+| `spot` | bool | `true` | Use Spot VMs for cost optimization |
+| `reservation_affinity` | string | `ANY_RESERVATION` | Reservation affinity type |
+
+### Node Metadata and Security
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `node_metadata` | map(string) | `{"disable-legacy-endpoints": "true"}` | Metadata for nodes |
+| `shielded_integrity_monitoring` | bool | `false` | Enable shielded integrity monitoring |
+| `shielded_secure_boot` | bool | `false` | Enable shielded secure boot |
+
+### Networking Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `network` | string | See defaults | VPC network self-link |
+| `subnetwork` | string | See defaults | Subnetwork self-link |
+| `enable_intra_node_visibility` | bool | `false` | Enable intra-node visibility |
+
+### Logging and Monitoring Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `logging_service` | string | `logging.googleapis.com/kubernetes` | Logging service for cluster |
+| `monitoring_service` | string | `monitoring.googleapis.com/kubernetes` | Monitoring service for cluster |
+| `enable_managed_prometheus` | bool | `false` | Enable managed Prometheus |
+
+### Node Management Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enable_autoupgrade` | bool | `true` | Enable automatic node upgrades |
+| `enable_autorepair` | bool | `true` | Enable automatic node repairs |
+| `max_surge_upgrade` | number | `1` | Max surge during upgrade |
+| `max_unavailable_upgrade` | number | `0` | Max unavailable nodes during upgrade |
+
+### Security and Compliance Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `binary_authorization_evaluation_mode` | string | `DISABLED` | Binary authorization mode |
+| `disable_workload_vulnerability_scanning` | bool | `true` | Disable workload vulnerability scanning |
 
 ## Outputs
 
@@ -194,6 +294,8 @@ Available outputs:
 - `network` - VPC network used by cluster
 - `subnetwork` - Subnetwork used by cluster
 - `node_locations` - List of node zones
+- `node_pool_name` - Name of the primary node pool
+- `node_pool_id` - ID of the primary node pool
 
 ## Cost Optimization
 
@@ -213,7 +315,17 @@ To disable Spot VMs, set `spot = false` in variables.
 terraform apply -var="num_nodes=3"
 ```
 
-This will update the cluster to have 3 nodes per zone (9 total across 3 zones).
+This updates the initial node count in the node pool.
+
+### Scale Node Pool
+
+For dynamic autoscaling, update the min and max node counts:
+
+```bash
+terraform apply -var="min_node_count=2" -var="max_node_count=5"
+```
+
+The cluster will automatically scale between 2 and 5 nodes based on demand.
 
 ### Change Machine Type
 
@@ -221,7 +333,7 @@ This will update the cluster to have 3 nodes per zone (9 total across 3 zones).
 terraform apply -var="machine_type=e2-medium"
 ```
 
-Note: This applies only to new nodes; existing nodes require manual deletion.
+Note: This applies only to new nodes in the node pool; existing nodes require manual deletion.
 
 ## Monitoring and Logging
 
@@ -283,6 +395,10 @@ kubectl cluster-info
 
 ## Notes
 
+- This configuration uses `google_container_node_pool` as a separate resource for better management and flexibility
+- You can create multiple node pools with different configurations if needed
+- The cluster automatically removes the default node pool when created (`remove_default_node_pool = true`)
+- Auto-repair and auto-upgrade are enabled by default for production readiness
 - This configuration is designed for learning and CKA exam preparation
 - For production use, consider adding additional security controls, backup strategies, and monitoring
 - The cluster uses default networking; customize `network` and `subnetwork` variables as needed

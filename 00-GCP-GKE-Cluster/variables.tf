@@ -12,7 +12,7 @@ variable "region" {
 variable "cluster_name" {
   description = "Name of the GKE cluster"
   type        = string
-  default     = "standard-public-cluster-1"
+  default     = "learning-gke-cluster-1"
 }
 
 variable "num_nodes" {
@@ -80,7 +80,7 @@ variable "spot" {
 variable "default_max_pods_per_node" {
   description = "Default maximum number of pods per node"
   type        = number
-  default     = 110
+  default     = 10
 }
 
 variable "enable_intra_node_visibility" {
@@ -152,17 +152,28 @@ variable "binary_authorization_evaluation_mode" {
 variable "enable_managed_prometheus" {
   description = "Enable managed Prometheus"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "shielded_integrity_monitoring" {
   description = "Enable shielded integrity monitoring"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "shielded_secure_boot" {
   description = "Enable shielded secure boot"
   type        = bool
   default     = false
+}
+variable "min_node_count" {
+  description = "Minimum number of nodes in the node pool"
+  type        = number
+  default     = 1
+}
+
+variable "max_node_count" {
+  description = "Maximum number of nodes in the node pool"
+  type        = number
+  default     = 1
 }

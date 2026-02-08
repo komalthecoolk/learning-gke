@@ -37,3 +37,12 @@ output "node_locations" {
   description = "Node locations in the cluster"
   value       = google_container_cluster.primary.node_locations
 }
+output "node_pool_name" {
+  description = "Name of the primary node pool"
+  value       = google_container_node_pool.node_pool_1.name
+}
+
+output "node_pool_id" {
+  description = "ID of the primary node pool"
+  value       = google_container_node_pool.node_pool_1.id
+}

@@ -4,7 +4,8 @@ data "google_project" "project" {
 resource "google_container_cluster" "primary" {
   name               = var.cluster_name
   location           = var.region
-  initial_node_count = var.num_nodes
+  initial_node_count = null
+  remove_default_node_pool = true
   node_locations     = var.node_locations
 
   # Cluster version and release channel
@@ -25,32 +26,6 @@ resource "google_container_cluster" "primary" {
   ip_allocation_policy {
     cluster_secondary_range_name  = ""
     services_secondary_range_name = ""
-  }
-
-  # Node pool configuration
-  node_config {
-    machine_type = var.machine_type
-    image_type   = var.image_type
-    disk_type    = var.disk_type
-    disk_size_gb = var.disk_size_gb
-
-    metadata = var.node_metadata
-
-    # preemptible = var.spot
-    spot        = true
-
-    reservation_affinity {
-      consume_reservation_type = var.reservation_affinity
-    }
-
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform",
-    ]
-
-    shielded_instance_config {
-      enable_integrity_monitoring = var.shielded_integrity_monitoring
-      enable_secure_boot          = var.shielded_secure_boot
-    }
   }
 
   # Pod configuration
@@ -90,4 +65,49 @@ resource "google_container_cluster" "primary" {
   }
 
   deletion_protection = false
+}
+
+# Default node pool resource
+resource "google_container_node_pool" "node_pool_1" {
+  name           = "${var.cluster_name}-node-pool-1"
+  location       = var.region
+  cluster        = google_container_cluster.primary.name
+  node_count     = var.num_nodes
+  node_locations = var.node_locations
+
+  autoscaling {
+    min_node_count = var.min_node_count
+    max_node_count = var.max_node_count
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  node_config {
+    machine_type = var.machine_type
+    image_type   = var.image_type
+    disk_type    = var.disk_type
+    disk_size_gb = var.disk_size_gb
+
+    metadata = var.node_metadata
+
+    spot = true
+
+    reservation_affinity {
+      consume_reservation_type = var.reservation_affinity
+    }
+
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform",
+    ]
+
+    shielded_instance_config {
+      enable_integrity_monitoring = var.shielded_integrity_monitoring
+      enable_secure_boot          = var.shielded_secure_boot
+    }
+  }
+
+  depends_on = [google_container_cluster.primary]
 }
